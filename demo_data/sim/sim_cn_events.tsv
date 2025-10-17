@@ -1,0 +1,8 @@
+Parent	Child	Truncal	Child_is_leaf	n_chr_arm_gains	n_chr_arm_losses	n_chr_gains	n_chr_losses	n_focal_gains	n_focal_losses	n_wgd
+0	1	True	False	6	11	1	8	39	29	1
+1	2	False	False	0	0	1	0	3	1	0
+1	3	False	False	1	0	0	0	0	0	0
+2	4	False	True	0	0	1	0	7	2	0
+2	5	False	True	1	0	0	0	3	3	0
+3	6	False	True	1	0	0	0	4	1	0
+3	7	False	True	0	0	1	0	3	1	0

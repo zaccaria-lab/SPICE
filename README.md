@@ -36,7 +36,6 @@ In general and especially in the case of performance issues, the use of `mamba` 
 After the installation, the environment can be activated and SPICE libraries can be executed from within the environment:
 ```shell
 conda activate spice
-sprinter
 ```
 
 Also, through [Pyomo](https://pyomo.readthedocs.io/en/stable/solving_pyomo_models.html#supported-solvers), SPICE requires the use of [Gurobi](https://www.gurobi.com/) which requires a valid Gurobi license that can be obtained freely for academic research purposes.
@@ -93,7 +92,7 @@ Inputs to the SPICE main function `run_spice_bootstrap`:
 <a name="outputs"></a>
 ### Outputs
 
-Input to the SPICE main function `run_spice_bootstrap`:
+Outputs to the SPICE main function `run_spice_bootstrap`:
 
 | **Argument** | **Description** |
 |----------|-----------------|

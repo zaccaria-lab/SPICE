@@ -10,16 +10,19 @@ from Bio.Phylo.TreeConstruction import DistanceMatrix as PDistanceMatrix
 from Bio.Phylo.TreeConstruction import DistanceTreeConstructor
 from collections import deque
 
-check_cn_same = (lambda profiles, leaves, c, a: np.all([np.equal(profiles[leaves[0]][c][a], profiles[l][c][a]) for l in leaves[1:]]))
+check_cn_same = (lambda profiles, leaves, c, a: np.all([np.equal(profiles[leaves[0]][c][a], profiles[l][c][a]) 
+                                                        for l in leaves[1:]]))
 
 
 def tree_bootstrapping(n_runs, leaves, segsizes, allele_specific, weight_wgd, max_cn, dist_func, rs, njobs=1):
+    assert n_runs > 0, 'The n_bootstraps parameter is set to 0, increase to run bootstrapping or provide a fixed topology.'
     np.random.seed(rs)
     chrs = list(leaves[list(leaves.keys())[0]].keys())
-    use_chrs = [c for c in chrs if ~np.all([check_cn_same(leaves, list(leaves.keys()), c, a) for a in range(1+allele_specific)])] 
-    with Pool(processes=njobs, initializer=init_trees, initargs=(leaves, segsizes, use_chrs, max_cn, allele_specific, weight_wgd, dist_func)) as pool:
+    use_chrs = [c for c in chrs if ~np.all([check_cn_same(leaves, list(leaves.keys()), c, a) for a in range(1+allele_specific)])]
+    with Pool(processes=njobs, initializer=init_trees, 
+              initargs=(leaves, segsizes, use_chrs, max_cn, allele_specific, weight_wgd, dist_func)) as pool:
         jobs = np.random.choice(2**20, n_runs, replace=False)
-        bar = ProgressBar(total=len(jobs), length=30, verbose=False)
+        bar = ProgressBar(total=len(jobs), length=30, verbose=False) 
         progress = (lambda e : bar.progress(advance=True, msg="Pair: {}".format(e)))
         bar.progress(advance=False, msg="Started")
         results = {i+1 : [tree, dm] for i, tree , dm in pool.imap_unordered(get_tree, jobs) if progress(i)}
@@ -32,7 +35,8 @@ def tree_bootstrapping(n_runs, leaves, segsizes, allele_specific, weight_wgd, ma
 
 def get_tree(job):
     np.random.seed(job)
-    tree, dm = generate_tree(leaves=LEAVES, segsizes=SEGSIZES, use_chrs=USE_CHRS, allele_specific=ALLELE_SPECIFIC, weight_wgd=WEIGHT_WGD, max_cn=MAX_CN, dist_func=DIST_FUNC)
+    tree, dm = generate_tree(leaves=LEAVES, segsizes=SEGSIZES, use_chrs=USE_CHRS, allele_specific=ALLELE_SPECIFIC, 
+                             weight_wgd=WEIGHT_WGD, max_cn=MAX_CN, dist_func=DIST_FUNC)
     return job, tree, dm
 
 
@@ -48,21 +52,26 @@ def init_trees(_leaves, _segsizes, _use_chrs, _max_cn, _allele_specific, _weight
     
 
 def generate_tree(leaves, segsizes, use_chrs, allele_specific, weight_wgd, max_cn, dist_func):
-    leaves_new, segsizes_new = generate_bootstrap_leaves(leaves, segsizes, use_chrs) #use_original_leaves(leaves) #! 
-    leaves_new, leaf_names_normal = add_fake_normal(leaves_new, allele_specific)
+    leaves_new, segsizes_new = generate_bootstrap_leaves(leaves, segsizes, use_chrs) #use_original_leaves(leaves) #!
+    leaves_new, leaf_names_normal = add_fake_normal(leaves_new)
     wgd_cost = max_cn if weight_wgd else 1
-    distance_matrix, max_distance = get_distance_matrix(leaves_new, wgd_cost, dist_func, segsizes_new)
+    distance_matrix, max_distance, leaf_order = get_distance_matrix(leaves_new, wgd_cost, dist_func, segsizes_new)
+    assert leaf_names_normal == leaf_order, 'The order of the leaf names in the distance matrix does not match the expected order.'
     T = make_neighbour_joining_tree(distance_matrix, leaf_names_normal)
     nj_edges, nj_mapping = smallleft_dsf(T)
     return tuple(sorted(nj_edges)), pd.DataFrame(distance_matrix)
 
 def use_original_leaves(leaves): # FOR TESTING DISTANCE METRICS ONLY!
-    return {l : {c : [list(np.array(leaves[l][c][a])) for a in range(len(leaves[l][c]))] for c in leaves[l].keys()} for l in leaves.keys()}
+    return {l : {c : [list(np.array(leaves[l][c][a])) 
+                      for a in range(len(leaves[l][c]))] 
+                 for c in leaves[l].keys()} 
+            for l in leaves.keys()}
 
 def generate_bootstrap_leaves(leaves, segsizes, use_chrs):
     sampled_chrs = np.random.choice(use_chrs, 22, replace=True)
     sample_segs = (lambda n: list(np.sort(np.random.choice(n, n, replace=True))))
-    sampled_segs = {i : sample_segs(len(leaves[1][c][0])) for i, c in enumerate(sampled_chrs)} 
+    use_leaf = list(leaves.keys())[0]
+    sampled_segs = {i : sample_segs(len(leaves[use_leaf][c][0])) for i, c in enumerate(sampled_chrs)} 
     sampled_leaves = {l : {i+1 : [list(np.array(leaves[l][c][a])[sampled_segs[i]]) for a in range(len(leaves[l][c]))] 
                                                                          for i, c in enumerate(sampled_chrs)} 
                                                                          for l in leaves.keys()}
@@ -70,16 +79,12 @@ def generate_bootstrap_leaves(leaves, segsizes, use_chrs):
                                                                          for i, c in enumerate(sampled_chrs)} 
     return sampled_leaves, sampled_segsizes
 
-
-def add_fake_normal(leaves, allele_specific):
+def add_fake_normal(leaves):
     n_leaves = len(leaves)
     leaf_names = list(leaves.keys())
-    leaf_names_normal = [0] + [i + n_leaves - 1 for i in leaf_names]
-    if allele_specific:
-        leaves[0] = {chr: [list(np.ones(len(i), dtype=int)) for i in cn] for chr, cn in leaves[1].items()}
-    else:
-        leaves[0] = {chr: list(np.ones(len(cn), dtype=int)) for chr, cn in leaves[1].items()}
-    return leaves, leaf_names_normal
+    leaf_names_normal = [0] + leaf_names
+    leaves[0] = {chr: [list(np.ones(len(i), dtype=int)) for i in cn] for chr, cn in leaves[leaf_names[0]].items()}
+    return leaves, sorted(leaf_names_normal)
 
 add_wgd_effect = (lambda cell, wgd_add: cell + wgd_add)
 add_telomeres = (lambda cell: np.concatenate(([1], np.array(cell), [1])))
@@ -94,7 +99,8 @@ def get_breakpoint_distance(cell_1, cell_2, wgd_add=0, dist_func='bpl1norm', seg
     wgd_add_c1 = wgd_add if type(wgd_add) == int else cell_1
     wgd_add_c2 = wgd_add if type(wgd_add) == int else cell_2
     
-    dist_funcs = {'bpl1norm' : calc_bp_l1normdist, 'bphamm' : calc_bp_hammdist, 'hamm' : calc_hammdist, 'hammweighted' : calc_hammweighteddist}
+    dist_funcs = {'bpl1norm' : calc_bp_l1normdist, 'bphamm' : calc_bp_hammdist, 'hamm' : calc_hammdist, 
+                  'hammweighted' : calc_hammweighteddist}
     
     if dist_func in ['hamm', 'hammweighted']:
         d1 = dist_funcs[dist_func](cell_2, add_wgd_effect(cell_1, wgd_add_c1), segsizes)
@@ -126,7 +132,7 @@ def get_distance_matrix(leaves, wgd_cost, dist_func, segsizes):
     pairs = set((i, j) if i >= j else (j, i) for i, j in itertools.combinations(leaves.keys(), 2))
     distance_matrix = {pair : calculate_distance(leaves, pair[0], pair[1], wgd_cost, dist_func, segsizes) for pair in pairs}
     dm = [[distance_matrix[j, i] for i in sorted(leaves.keys()) if j > i] + [0] for j in sorted(leaves.keys())]
-    return dm, max(distance_matrix.values())
+    return dm, max(distance_matrix.values()), sorted(leaves.keys())
 
 
 def make_neighbour_joining_tree(distance_matrix, leaves):
@@ -138,7 +144,7 @@ def make_neighbour_joining_tree(distance_matrix, leaves):
 def smallleft_dsf(T):
     nleaves = T.count_terminals()
     mapping, edges = smallleft_dsf_inner(T.root, set(), deque(range(nleaves, 2 * nleaves)))
-    nj_edges = [(i, j) for i, j in list(edges) if j != 0]
+    nj_edges = [(i, j) for i, j in list(edges) if str(j) != '0']
     nj_mapping = {str(i) : j for i, j in mapping.items() if (str(i) != 'None')}
     return nj_edges, nj_mapping 
 
@@ -180,8 +186,9 @@ class ProgressBar:
         write = sys.stderr.write
         if advance:
             self.counter += 1
-        percent = ("{0:." + str(self.decimals) + "f}").format(100 * (self.counter / float(self.total)))
-        filledLength = int(self.length * self.counter // self.total)
+        v = 0 if self.total == 0 else 100 * (self.counter / float(self.total))
+        percent = ("{0:." + str(self.decimals) + "f}").format(v)
+        filledLength = 0 if self.total == 0 else int(self.length * self.counter // self.total)
         bar = self.fill * filledLength + '-' * (self.length - filledLength)
         rewind = '\x1b[2K\r'
         result = '%s |%s| %s%% %s' % (self.prefix, bar, percent, self.suffix)

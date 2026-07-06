@@ -10,7 +10,7 @@ def add_input_profile_constraints(model, leaves, allele_specific, n_leaves):
             model.cons.add(expr=model.c[0, a, ch, s] == 1)
         model.cons.add(expr=model.chat[0, a, ch, s] == 1)
         for l in model.L:
-            model.cons.add(expr=model.c[l, a, ch, s] == leaves[l - n_leaves + 1][ch][a][s - 1])
+            model.cons.add(expr=model.c[l, a, ch, s] == leaves[l][ch][a][s - 1])
     return model
 
 
@@ -52,7 +52,7 @@ def add_wgd_constraints(model, max_cn):
             model.cons.add(model.dddot[j, a, ch, s] <= model.w[j] * max_cn)
             model.cons.add(model.gddotbar[j, a, ch, s] <= model.w[j] * max_cn)
             model.cons.add(model.dddotbar[j, a, ch, s] <= model.w[j] * max_cn)
-            
+        
         for i in model.I:
             i_children = [b[1] for b in model.E if b[0] == i]
             max_wgd_children = len(i_children) - 1 if len(i_children) > 1 else 1 

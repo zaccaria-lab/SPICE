@@ -4,16 +4,23 @@ import numpy as np
 from spice.core.auxillary.ilp_functions import *
 
 def add_model_sets(model, leaves, allele_specific, edges, logger):
+    # define tree variables
     n_leaves = len(leaves)
-    model.V = pe.Set(initialize=range(2*n_leaves))
-    model.V1 = pe.Set(initialize=range(1, 2*n_leaves))
-    chr_index = {(chromosome, a) : list(np.arange(1, len(profile[a])+1)) for chromosome, profile in leaves[1].items() for a in range(len(profile))}
+    nodes = list(set([i for j in edges for i in j]))
+    parents, children = list(zip(*edges))
+    parents = list(set(parents))
+    root = [i for i in parents if i not in children][0]
+    leaf_example = list(leaves.keys())[0]
+    # create tree variables
+    model.V = pe.Set(initialize=nodes)
+    model.V1 = pe.Set(initialize=[i for i in nodes if i != root])
+    chr_index = {(chromosome, a) : list(np.arange(1, len(profile[a])+1)) for chromosome, profile in leaves[leaf_example].items() for a in range(len(profile))}
     genome_index = [(a, ch, n) for (ch, a), segs in chr_index.items() for n in segs]
     single_seg_chrs = []
     seg_codes = []
     seg_pairs_index = [(a, ch, p, q) for (ch, a), segs in chr_index.items() for (p, q) in get_seg_pairs(segs, leaves, ch, a, single_seg_chrs, seg_codes, logger, False)]
     n_loci = len(genome_index)
-    zeros_pos = [(allele, chromosome, 0) for chromosome in leaves[1] for allele in leaves[1][chromosome]]
+    zeros_pos = [(allele, chromosome, 0) for chromosome in leaves[leaf_example] for allele in leaves[leaf_example][chromosome]]
     model.ZERO = pe.Set(initialize=zeros_pos)
     model.N = pe.Set(initialize=genome_index)
     model.N0 = pe.Set(initialize=zeros_pos + genome_index)
@@ -23,8 +30,8 @@ def add_model_sets(model, leaves, allele_specific, edges, logger):
                                                                                                                             (p1 < p2) & (q1 < q2) & (p2 <= q1+1)]    
     model.O = pe.Set(initialize=overlapping_intervals)
     model.E = pe.Set(initialize=edges)
-    model.L = pe.Set(initialize=range(n_leaves, 2*n_leaves))
-    model.I = pe.Set(initialize=range(1, n_leaves))
+    model.L = pe.Set(initialize=list(leaves.keys()))
+    model.I = pe.Set(initialize=[i for i in parents if i != root])
     return model, n_loci, sum(seg_codes) > 0
 
 

@@ -10,7 +10,7 @@ def add_input_profile_constraints(model, leaves, allele_specific, n_leaves):
             model.cons.add(expr=model.c[0, a, ch, s] == 1)
         model.cons.add(expr=model.chat[0, a, ch, s] == 1)
         for l in model.L:
-            model.cons.add(expr=model.c[l, a, ch, s] == leaves[l - n_leaves + 1][ch][a][s - 1])
+            model.cons.add(expr=model.c[l, a, ch, s] == leaves[l][ch][a][s - 1])
     return model
 
 

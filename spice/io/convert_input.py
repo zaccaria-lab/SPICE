@@ -7,14 +7,19 @@ def convert_sim_major_minor(df, major_minor_type):
     df_test = df.pivot_table(index=id_cols, columns='Allele', values='CN').reset_index()
     df_test['switch'] = np.where(df_test['A'] == df_test['B'], 'SAME', df_test['A'] > df_test['B'])
     if major_minor_type == 'leaf_dependent':
-        switch_pos = df_test[df_test.switch != 'SAME'].groupby(['Chr', 'Pos', 'Start', 'End'])['switch'].apply(lambda x: x.value_counts().index[0]).reset_index()
+        switch_pos = (df_test[df_test.switch != 'SAME']
+                      .groupby(['Chr', 'Pos', 'Start', 'End'])['switch']
+                      .apply(lambda x: x.value_counts().index[0])
+                      .reset_index())
         df_test = df_test.drop(['switch'], axis=1).merge(switch_pos, on=['Chr', 'Pos', 'Start', 'End'], how='left')
         df_test['switch'] = df_test['switch'].fillna(False) 
     df_test['minor'] = np.where(df_test['switch'], df_test['B'], df_test['A']) 
     df_test['major'] = np.where(df_test['switch'], df_test['A'], df_test['B']) 
     df_test = df_test[id_cols + ['major', 'minor']]
     df_test.columns = id_cols + ['A', 'B']
-    df_test = pd.melt(df_test, id_vars=['Node', 'Chr', 'Pos', 'Start', 'End'], var_name='Allele', value_name='CN').sort_values(by=id_cols + ['Allele']).reset_index(drop=True)
+    df_test = (pd.melt(df_test, id_vars=['Node', 'Chr', 'Pos', 'Start', 'End'], var_name='Allele', value_name='CN')
+               .sort_values(by=id_cols + ['Allele'])
+               .reset_index(drop=True))
     return df_test
 
 
@@ -25,7 +30,9 @@ def sim_to_medicc(nodes, edges=None):
         leaf_nodes = nodes.Node.unique()
 
     leaf_profiles = nodes[nodes.Node.isin(leaf_nodes)].sort_values(by=['Node', 'Chr', 'Allele', 'Pos'])
-    leaf_profiles = leaf_profiles.pivot_table(index=['Node', 'Chr', 'Start', 'End'], columns=['Allele'], values='CN').reset_index()
+    leaf_profiles = (leaf_profiles
+                     .pivot_table(index=['Node', 'Chr', 'Start', 'End'], columns=['Allele'], values='CN')
+                     .reset_index())
     leaf_profiles.columns = ['sample_id', 'chrom', 'start', 'end', 'cn_a', 'cn_b']
     leaf_profiles.sample_id = leaf_profiles.sample_id.apply(lambda x: 'sample_' + str(x))
     return leaf_profiles

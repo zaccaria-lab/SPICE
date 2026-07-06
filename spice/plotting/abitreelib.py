@@ -7,17 +7,15 @@ from matplotlib import transforms
 
 # Tree plotting
 
-def plot_cn_figure(cn_out_tree, cn_profiles, root, leaf_order=None, cn_palette='RdBu_r', color_mapping={}, ax=None, plot_root=True, idx=None, chrs='all', real_chr_lengths=True):
+def plot_cn_figure(cn_out_tree, cn_profiles, root, leaf_order=None, cn_palette='RdBu_r', color_mapping={}, ax=None, plot_root=True, idx=None, chrs='all', real_chr_lengths=True, max_cn=None):
     if idx is not None:
         cn_profiles = cn_profiles[cn_profiles['Solution'] == idx].copy()
         cn_out_tree = cn_out_tree[cn_out_tree['Solution'] == idx].copy()
-        
-    cn_profiles['Node'] = cn_profiles['Node'].astype(str)
-    if 'Allele' in cn_profiles.columns:
-        idx_cols = [i for i in cn_profiles.columns if i not in ['Allele', 'CN']]
-        cn_profiles = cn_profiles.pivot_table(index=idx_cols, columns='Allele', values='CN').reset_index()
-    if chrs != 'all':
-        cn_profiles = cn_profiles[cn_profiles['Chr'].isin(chrs)].copy()
+   
+    cn_profiles = process_cn_profiles(cn_profiles, chrs)
+    if max_cn is None:
+        max_cn = cn_profiles[[i for i in cn_profiles.columns if 'cn' in i.lower()]].values.flatten().max()
+    
     cn_out_tree[['Parent', 'Child']] = cn_out_tree[['Parent', 'Child']].astype(str)
     root = str(root)
      
@@ -38,7 +36,7 @@ def plot_cn_figure(cn_out_tree, cn_profiles, root, leaf_order=None, cn_palette='
     
     allele_specific = True if len(cn_plot) > 1 else False
 
-    sizey = (int(cn_profiles.Node.nunique()*0.4) + 1) * 1.5 #rm •2
+    sizey = (int(cn_profiles.Node.nunique()*0.4) + 1) #* 1.5 
     if ax is None:
         if allele_specific:
             fig, ax = plt.subplots(1, 4, figsize=(30, sizey), width_ratios=[5, 0.2, 15, 15], sharey='row')
@@ -48,10 +46,11 @@ def plot_cn_figure(cn_out_tree, cn_profiles, root, leaf_order=None, cn_palette='
     ax[1].set_visible(False)
     
     # # Top left = colorbar
-    add_cn_legend(ax[0], cn_palette)
+    add_cn_legend(ax[0], cn_palette, allele_specific, max_cn)
     
     # Top right - chrs
-    add_chr_bar(ax[2], chr_data, 'Allele A')
+    name = 'Allele A' if allele_specific else 'Total Copy Number'
+    add_chr_bar(ax[2], chr_data, name)
     if allele_specific:
         add_chr_bar(ax[3], chr_data, 'Allele B')
 
@@ -61,10 +60,10 @@ def plot_cn_figure(cn_out_tree, cn_profiles, root, leaf_order=None, cn_palette='
 
     # Bottom right - CNs
     for i, cn_profiles in enumerate(cn_plot):
-        add_cn_profiles(ax[i+2], cn_profiles, chr_data, coords, cn_palette)
+        add_cn_profiles(ax[i+2], cn_profiles, leaves, root, chr_data, coords, cn_palette, allele_specific, max_cn)
     
     if idx is not None: 
-        ax[2].text(-60, -1, f'Solution #{idx}', fontsize=18, ha='center', va='center', zorder=10)
+        ax[0].text(-5, 0, f'Solution #{idx}', fontsize=18, ha='center', va='center', zorder=10)
         
     plt.subplots_adjust(wspace=0.04, hspace=-0.05);
     
@@ -80,10 +79,12 @@ def add_wgd(ax, coords, cn_out_tree):
     ax.set_ylabel('')
     ax.set_xticks([])
     
-def add_cn_legend(ax, cn_palette):
-    ax_cbar = ax.inset_axes(bounds=(0, 0, 0.1, 0.3)) #bbox_to_anchor=(200, 1700, 50, 50)) 
-    sns.heatmap(pd.DataFrame(np.arange(0, 7)), ax=ax_cbar, cmap=cn_palette, cbar=False, square=True, linewidths=2, linecolor='white', vmin=0, vmax=6, center=1)
-    ax_cbar.set_yticks(np.arange(0.5, 7.5), np.arange(0, 7), fontsize=12, rotation=0)
+def add_cn_legend(ax, cn_palette, allele_specific, max_cn):
+    center = 1 if allele_specific else 2 if max_cn > 1 else 0.5
+    step = 1 if max_cn > 1 else 0.1
+    ax_cbar = ax.inset_axes(bounds=(0, 0, 0.1, 0.05*max_cn)) 
+    sns.heatmap(pd.DataFrame(np.arange(0, max_cn+1, step)), ax=ax_cbar, cmap=cn_palette, cbar=False, square=True, linewidths=2, linecolor='white', vmin=0, vmax=max_cn, center=center)
+    # ax_cbar.set_yticks(np.arange(0.5, max_cn+1.5, step), [f'{i:.1f}' for i in np.arange(0, max_cn+1, step)], fontsize=12, rotation=0)
     ax_cbar.invert_yaxis()
     ax_cbar.set_xticks([])
     ax_cbar.set_title('# Copies', fontsize=18, pad=10)
@@ -117,7 +118,7 @@ def add_cn_tree(ax, edges_plot, coords, palette, root, leaves, plot_root=False):
         if (plot_root == True) or (row['index'] != root):
             ax.plot([row.x, coords['x'].max()+1.5], [row.y, row.y], color='grey', linestyle='-', linewidth=8, zorder=0, alpha=0.15, clip_on=False)
     ax.yaxis.tick_right()
-    ax.set_yticks(ticks=coords['y'], labels=[i.replace('sample_', '') if i in leaves else f"int_{i}" if ('internal' not in i) & (i != root) else i.replace('internal_', 'int').replace('internal', 'int') for i in coords['name']], fontsize=16, ha='left')
+    ax.set_yticks(ticks=coords['y'], labels=[i.replace('sample_', '').replace('clone_', '') if i in leaves else f"int_{i}" if ('internal' not in i) & (i != root) else i.replace('internal_', 'int').replace('internal', 'int') for i in coords['name']], fontsize=16, ha='left')
     ax.tick_params(axis='y', which='major', pad=5, length=0)
     ax.set_xlabel('')
     ax.set_ylabel('')
@@ -127,20 +128,20 @@ def add_cn_tree(ax, edges_plot, coords, palette, root, leaves, plot_root=False):
     sns.despine(left=True, bottom=True, ax=ax)
     ax.spines['right'].set_color('white')
     
-def add_cn_profiles(ax, cn_plot, chr_data, coords, cn_palette):
+def add_cn_profiles(ax, cn_plot, leaves, root, chr_data, coords, cn_palette, allele_specific, max_cn):
     ax.set_facecolor('white')
-    sns.heatmap(cn_plot, cmap=cn_palette, vmax=6, center=1, vmin=0, ax=ax, cbar=False, linewidth=0, linecolor='white') #! CHANGE BACK TO 0
-    # ax.set_ylim(-.5, len(coords)+1.5)
+    center = 1 if allele_specific else 2 if max_cn > 1 else 0.5
+    sns.heatmap(cn_plot, cmap=cn_palette, vmax=max_cn, center=center, vmin=0, ax=ax, cbar=False, linewidth=0, linecolor='white') #! CHANGE BACK TO 0
+    ax.set_ylim(-.5, len(coords)+.5)
     ax.set_xticks([])
-    ax.yaxis.set_tick_params(labelleft=False)
-    ax.set_yticks([])
-    ax.set_yticklabels([])
+    ax.set_yticklabels([i.replace('sample_', '').replace('clone_', '') if i in leaves else f"int_{i}" if ('internal' not in i) & (i != root) else i.replace('internal_', 'int').replace('internal', 'int') for i in list(cn_plot.index)])
     ax.set_xlabel('')
     ax.set_ylabel('')
+    c = 'white' if max_cn == 1 else 'black'
     for i in range(len(coords)):
         ax.axhline(y=i, color='white', linewidth=3)  
     for i in list(chr_data[chr_data.Chr != chr_data.Chr.shift()].index):
-        ax.axvline(x=i, ymin=0, ymax=1, color='black', linestyle='dotted', linewidth=2)
+        ax.axvline(x=i, ymin=0, ymax=1, color=c, linestyle='dotted', linewidth=2)
 
 def process_cn_profiles_data(cn_profiles, root, plot_root, real_chr_lengths):
     if plot_root == False:
@@ -275,16 +276,16 @@ def process_cn_profile_comp_data(cn_profiles, cn_profiles2, root, plot_root, rea
         cn_plot_profiles['Positions'] = cn_plot_profiles['Start']
     cn_plot = [cn_plot_profiles.pivot_table(columns=['Chr', 'Positions'], index='Node', values=cn_col) for cn_col in [j for j in cn_profiles.columns if ('cn' in j.lower()) or (j in ['A', 'B'])]]
 
-    chr_data = cn_plot_profiles[['Chr', 'Positions']].drop_duplicates().reset_index(drop=True)
+    chr_data = cn_plot_profiles[['Chr', 'Positions']].drop_duplicates().sort_values(by=['Chr', 'Positions']).reset_index(drop=True).reset_index(drop=True)
     return cn_plot, chr_data, wrong
 
-def add_cn_profile_comp(ax, cn_plot, chr_data, coords, cn_palette):
+def add_cn_profile_comp(ax, cn_plot, leaves, root, chr_data, coords, cn_palette):
     sns.heatmap(cn_plot, cmap='Reds', vmax=1, vmin=0, ax=ax, cbar=False, linewidth=0, linecolor='black')
     ax.set_ylim(-.5, len(coords)+1.5)
     ax.set_xticks([])
     ax.yaxis.set_tick_params(labelleft=False)
-    ax.set_yticks([])
-    ax.set_yticklabels([])
+    # ax.set_yticks([])
+    ax.set_yticklabels([i.replace('sample_', '') if i in leaves else f"int_{i}" if ('internal' not in i) & (i != root) else i.replace('internal_', 'int').replace('internal', 'int') for i in list(cn_plot.index)])
     ax.set_xlabel('')
     ax.set_ylabel('')
     for i in range(len(coords)):
@@ -303,7 +304,6 @@ def process_cn_profiles(cn_profiles, chrs):
 
 
 def plot_cn_comparison(cn_out_tree, cn_profiles, cn_profiles2, root, leaf_order=None, cn_palette='RdBu_r', color_mapping={}, ax=None, plot_root=True, idx1=None, idx2=None, chrs='all', profile2_mapping=None, medicc=False, real_chr_lengths=True):
-    
     if idx1 is not None:
         cn_profiles = cn_profiles[cn_profiles['Solution'] == idx1].copy()
         cn_out_tree = cn_out_tree[cn_out_tree['Solution'] == idx1].copy()
@@ -315,7 +315,6 @@ def plot_cn_comparison(cn_out_tree, cn_profiles, cn_profiles2, root, leaf_order=
     cn_profiles2 = process_cn_profiles(cn_profiles2, chrs)
 
     cn_out_tree[['Parent', 'Child']] = cn_out_tree[['Parent', 'Child']].astype(str)
-        
     root = str(root)
      
     parents = cn_out_tree['Parent'].unique()
@@ -350,9 +349,9 @@ def plot_cn_comparison(cn_out_tree, cn_profiles, cn_profiles2, root, leaf_order=
     sizey = int(cn_profiles.Node.nunique()*0.6) + 1
     if ax is None:
         if allele_specific:
-            fig, ax = plt.subplots(1, 4, figsize=(30, sizey), width_ratios=[5, 0.2, 15, 15], sharey=False)
+            fig, ax = plt.subplots(1, 4, figsize=(30, sizey), width_ratios=[5, 0.2, 15, 15], sharey='row')
         else:
-            fig, ax = plt.subplots(1, 3, figsize=(25, sizey), width_ratios=[6, 0.2, 15], sharey=False)
+            fig, ax = plt.subplots(1, 3, figsize=(25, sizey), width_ratios=[6, 0.2, 15], sharey='row')
         
     ax[1].set_visible(False)
     
@@ -369,7 +368,7 @@ def plot_cn_comparison(cn_out_tree, cn_profiles, cn_profiles2, root, leaf_order=
 
     # Bottom right - CNs
     for i, cn_profiles in enumerate(cn_plot):
-        add_cn_profile_comp(ax[i+2], cn_profiles, chr_data, coords, cn_palette)
+        add_cn_profile_comp(ax[i+2], cn_profiles, leaves, root, chr_data, coords, cn_palette)
     
     if idx1 is not None: 
         add = f' vs {idx2}' if idx2 is not None else ''
@@ -377,4 +376,4 @@ def plot_cn_comparison(cn_out_tree, cn_profiles, cn_profiles2, root, leaf_order=
         
     plt.subplots_adjust(wspace=0.08, hspace=-0.05);
     
-    return wrong
+    # return wrong

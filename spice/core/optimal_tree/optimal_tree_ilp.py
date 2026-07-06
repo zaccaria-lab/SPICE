@@ -17,12 +17,16 @@ def get_optimal_tree(leaves,
                     tree_edges, 
                     time_limit, 
                     weight_wgd,
+                    init_model=None,
                     nthreads=1, 
                     mem=0.5,
                     debug=False,
                     rs=1,
                     logger=None,
                     output_dir=None):
+    '''
+    
+    '''
     
     if (logger is None):
         logger, logfile = initialize_logger(verbose, output_dir)
@@ -35,12 +39,13 @@ def get_optimal_tree(leaves,
     # INITIATE MODEL
     model = pe.ConcreteModel()
     model.cons = pe.ConstraintList()
-    model, n_loci = add_model_vars(model, leaves, tree_edges, max_cn, allele_specific)
+    model, n_loci = add_model_vars(model, leaves, tree_edges, max_cn, allele_specific, init_model)
     model = add_model_cons(model, leaves, max_cn, allele_specific)
     node_depth_weighting = get_node_depth_weighting(tree_edges)
     model = add_model_obj(model, max_cn, n_loci, weight_wgd, node_depth_weighting)
     logger.trace('ILP defined')
-    logger.info('Model consists of {} variables and {} constraints'.format(get_n_modelvars(model), get_n_modelcons(model)))
+    logger.trace('Model consists of {} variables and {} constraints'.format(get_n_modelvars(model), 
+                                                                            get_n_modelcons(model)))
     
     # SOLVE MODEL
     opt = pe.SolverFactory('gurobi', solver_io="python")
@@ -54,18 +59,22 @@ def get_optimal_tree(leaves,
     
     logger.trace('Running ILP')
     solve_start_time = time.perf_counter()
-    results = opt.solve(model, tee=verbose, warmstart=True, options={'timelimit':time_limit}, timelimit=time_limit, symbolic_solver_labels=True, load_solutions=True)
+    results = opt.solve(model, tee=verbose, warmstart=True, options={'timelimit':time_limit}, timelimit=time_limit, 
+                        symbolic_solver_labels=True, load_solutions=True)
     solve_time = time.perf_counter() - solve_start_time
     logger.trace('Processing ILP output')
     
-    solve_info = {'optimal_tree_solve_time' : solve_time, 'optimal_tree_model_status' : get_solution_status(opt), 'optimal_tree_gap' : get_gap(results), 'optimal_tree_total_cost' : opt._solver_model.getAttr('ObjVal')}
+    solve_info = {'optimal_tree_solve_time' : solve_time, 'optimal_tree_model_status' : get_solution_status(opt), 
+                  'optimal_tree_gap' : get_gap(results), 'optimal_tree_total_cost' : opt._solver_model.getAttr('ObjVal')}
     solve_info = pd.DataFrame(solve_info, index=['value']).T.reset_index().rename(columns={'index':'parameter'})
     total_nodes, total_events, edge_summary, debug = process_optimal_model_output(opt, tree_edges, debug)
     
     return total_nodes, edge_summary, solve_info, model, debug
 
 def get_node_depth_weighting(tree_edges):
-    nodes = set([node for edge in tree_edges for node in edge if node != 0])
+    parents, children = list(zip(*tree_edges))
+    root = [i for i in parents if i != children]
+    nodes = set([node for edge in tree_edges for node in edge if node != root])
     weighting = {j : len(get_ancestor_nodes(j, tree_edges, [], False)) for j in nodes}
     depths = np.unique(list(weighting.values()))
     weights_sum = np.sum(depths.max() - depths + 1)

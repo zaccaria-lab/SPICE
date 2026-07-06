@@ -1,6 +1,52 @@
 import pandas as pd
 import numpy as np
 
+def phase_profiles(profiles, leaf_dependent=True):
+    if type(profiles) == pd.DataFrame:
+        input_type = 'df'
+        profiles = cn_df_to_dict(profiles, convert_leaf_names=False)
+    else:
+        input_type = 'dict'
+    chromosomes = set(ch for prof in profiles for ch in profiles[prof])
+    nodes = set(profiles.keys())
+    chrsize = {ch : {len(profiles[prof][ch][0]) for prof in profiles} for ch in chromosomes}
+    assert all(len(chrsize[ch]) == 1 for ch in chrsize), 'Chromosomes have different lengths in different leaves'
+    chrsize = {ch : chrsize[ch].pop() for ch in chromosomes}
+    ref = {node : {ch : tuple([profiles[node][ch][i][0] for i in range(2)]) for ch in chromosomes} for node in nodes}
+    
+    switch_alleles = (lambda node, ch, : (result[node][ch][0][0], result[node][ch][1][0]) != ref[node][ch])
+    swap_profiles = (lambda p, switch: [p[1], p[0]] if switch else p)
+    
+    if leaf_dependent:
+        mkinput = (lambda ch : {b : {node : (profiles[node][ch][0][b], 
+                                            profiles[node][ch][1][b]) 
+                                    for node in nodes} for b in range(chrsize[ch])})
+        phased =  {ch : phasing(mkinput(ch)) for ch in chromosomes}
+        result = {node : {ch : [[phased[ch][b][node][0] for b in range(chrsize[ch])],
+                                [phased[ch][b][node][1] for b in range(chrsize[ch])]] 
+                          for ch in chromosomes} 
+                  for node in nodes}
+        ld_switchtoref = {ch : np.any([switch_alleles(node, ch) for node in nodes]) for ch in chromosomes}
+        result = {node : {ch : swap_profiles(result[node][ch], ld_switchtoref[ch]) 
+                          for ch in chromosomes} 
+                  for node in nodes}
+    else:
+        mkinput = (lambda node, ch : {b : {node : (profiles[node][ch][0][b], 
+                                                  profiles[node][ch][1][b])} 
+                                           for b in range(chrsize[ch])})
+        phased = {node : {ch : phasing(mkinput(node, ch)) for ch in chromosomes} for node in nodes}
+        result = {node : {ch : [[phased[node][ch][b][node][0] for b in range(chrsize[ch])],
+                                [phased[node][ch][b][node][1] for b in range(chrsize[ch])]] 
+                          for ch in chromosomes} for node in nodes}
+        result = {node : {ch : swap_profiles(result[node][ch], switch_alleles(node, ch)) 
+                          for ch in chromosomes} 
+                  for node in nodes}
+    if input_type == 'dict':
+        return cn_dict_to_df(result)
+    else:    
+        return result
+    
+
 def phasing(table):
     D = []
     B = []

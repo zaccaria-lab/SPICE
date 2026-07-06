@@ -4,7 +4,7 @@ import os
 
 standard_params = {'min_segsize' : 0, 'max_n_segs': None, 'allele_specific' : True, 'allele_phasing' : False, 'leaf_dependent_phasing' : False,
                     'max_cn' : 8, 'verbose' : True, 'weighted_wgd' : True, 'multiple_solutions' : True, 'solution_pool_size' : 1000, 
-                    'n_bootstraps' : 1000, 'rank_multiple_trees' : True}
+                    'n_bootstraps' : 1000, 'rm_small_segs' : False, 'rank_multiple_trees' : True}
 
 def create_spice_script(patient, 
                         input_file, 

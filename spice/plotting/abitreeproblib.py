@@ -23,9 +23,9 @@ if not cmap_exists("event_prob_cmap"):
     matplotlib.cm.register_cmap("event_prob_cmap", event_prob_cmap)
 
 
-def plot_cn_probabilities(cn_out_tree, cn_profiles, cn_probabilities, leaf_order=None, color_mapping={}, ax=None, chrs='all', real_chr_lengths=True, plot_node_names=True, scale=1):
+def plot_cn_probabilities(cn_out_tree, cn_profiles, cn_probabilities, leaf_order=None, color_mapping={}, ax=None, chrs='all', real_chr_lengths=True, plot_node_names=True, scalex=1, scaley=1):
     tree_id = cn_probabilities['tree_id'].unique()[0]
-    # cn_profiles = cn_profiles[cn_profiles['Solution'] == idx].copy()
+    cn_profiles = cn_profiles[cn_profiles['tree_id'] == tree_id].copy()
     cn_out_tree = cn_out_tree[cn_out_tree['tree_id'] == tree_id][['Parent', 'Child', 'WGD']].drop_duplicates().copy()
     cn_probabilities, cn_out_tree = process_input_data_format(cn_probabilities, cn_out_tree, chrs)
     parents = cn_out_tree['Parent'].unique()
@@ -34,14 +34,15 @@ def plot_cn_probabilities(cn_out_tree, cn_profiles, cn_probabilities, leaf_order
     leaves = get_leaves(parents, children)
     cn_all_profiles = concat_cn_dfs(cn_profiles, cn_probabilities, leaves)
     cn_values = np.arange(0, cn_all_profiles['CN'].max() + 1).astype(int)
-    
+
     # Add figure
     allele_specific = True if cn_all_profiles.Allele.nunique() == 2 else False
     n_nodes = cn_all_profiles.Node.nunique()
-    sizey = ((int(n_nodes * (cn_all_profiles['CN'].max()/10)) + 1) * 1.5) * scale 
-    gap = 0.1 if plot_node_names else -1
+    sizey = ((int(n_nodes * (cn_all_profiles['CN'].max()/10)) + 1) * 1.5) * scaley
+    sizex =  (25+(5*allele_specific)) * scalex
+    gap = 0.8/scalex if plot_node_names else -1
     width_ratios = [5, gap, 15, 15] if allele_specific else [6, gap, 15]
-    fig = plt.figure(figsize=(25+(5*allele_specific), sizey))
+    fig = plt.figure(figsize=(sizex, sizey))
     gs = fig.add_gridspec(n_nodes + 1, 3 + allele_specific, width_ratios=width_ratios, height_ratios=[0.3] + [1] * n_nodes)
     
 
@@ -84,8 +85,12 @@ get_root = (lambda parents, children: parents[~np.isin(parents, children)][0])
 get_leaves = (lambda parents, children: children[~np.isin(children, parents)])
 
 def concat_cn_dfs(cn_profiles, cn_probabilities, leaves):
-    cn_leaf_profiles = cn_profiles[(cn_profiles['Node'].isin(leaves))][['tree_id', 'Node', 'Chr', 'Pos', 'Start', 'End', 'cnA', 'cnB']].drop_duplicates().copy()
-    cn_leaf_profiles = pd.melt(cn_leaf_profiles, id_vars=['tree_id', 'Node', 'Chr', 'Pos', 'Start', 'End'], value_vars=['cnA', 'cnB'], var_name='Allele', value_name='CN')
+    allele_specific = True if cn_probabilities.Allele.nunique() == 2 else False
+    if allele_specific:
+        cn_leaf_profiles = cn_profiles[(cn_profiles['Node'].isin(leaves))][['tree_id', 'Node', 'Chr', 'Pos', 'Start', 'End', 'cnA', 'cnB']].drop_duplicates().copy()
+        cn_leaf_profiles = pd.melt(cn_leaf_profiles, id_vars=['tree_id', 'Node', 'Chr', 'Pos', 'Start', 'End'], value_vars=['cnA', 'cnB'], var_name='Allele', value_name='CN')
+    else:
+        cn_leaf_profiles = cn_profiles[(cn_profiles['Node'].isin(leaves))].copy()
     cn_leaf_profiles['CN_probability'] = 1
     cn_all_profiles = pd.concat([cn_probabilities, cn_leaf_profiles], axis=0).reset_index(drop=True)
     return cn_all_profiles
@@ -155,7 +160,7 @@ def add_cn_profiles(cn_ax, cn_plot_data, cn_values):
         sns.heatmap(cn_plot_data[data_idx].replace(0, np.nan), cmap=event_prob_cmap, vmax=1, vmin=0, ax=ax, cbar=False, linewidth=0, linecolor='white')
         ax.set_xticks([])
         ax.set_xlabel('')
-        ax.set_ylabel('CN', fontsize=16) 
+        ax.set_ylabel('') 
         ax.set_yticks(ticks=[i+0.5 for i in list(cn_values)], labels=list(cn_values[::-1]), rotation=0, fontsize=10)
         sns.despine(left=False, bottom=False, ax=ax)
     

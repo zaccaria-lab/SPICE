@@ -3,11 +3,11 @@ from spice.core.optimal_tree.model_constraints import *
 from spice.core.optimal_tree.model_objective import *
 
 
-def add_model_vars(model, leaves, edges, max_cn, allele_specific):
+def add_model_vars(model, leaves, edges, max_cn, allele_specific, init_model):
     n_leaves = len(leaves)
     model, n_loci = add_model_sets(model, leaves, allele_specific, edges)
     # Add variables
-    model = add_copyprofile_variables(model, max_cn)
+    model = add_copyprofile_variables(model, max_cn, init_model)
     model = add_event_variables(model, max_cn)
     model = add_start_event_variables(model, max_cn)
     model = add_wgd_variables(model)

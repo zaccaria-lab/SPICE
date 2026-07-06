@@ -23,22 +23,27 @@ A full repoducible demo of SPICE, with an already reproduced run, is available a
 <a name="installation"></a>
 ## Installation
 
-SPICE is written in Python3 and will be distributed through [bioconda](https://bioconda.github.io/) (not yet available).
-Until final release, SPICE requires a standard `conda` environment, that can be installed locally on any machine using any of the many available distributions, including the reccommended [Miniforge](https://github.com/conda-forge/miniforge), the compact [Miniconda](https://docs.conda.io/en/latest/miniconda.html), or the complete [Anaconda](https://www.anaconda.com/).
-
-The required environment is available within [spice_env.yaml](spice_env.yaml) and can be created using the following command after cloning this repository locally:
+SPICE is written in Python3 and is distributed through [bioconda](https://bioconda.github.io/index.html). Before installing, bioconda needs to be set up correctly by running the following commands. This only needs to be done once and can be skipped if bioconda has already been configured on the machine:
 ```shell
-conda env create -f spice_env.yaml -n spice
+conda config --add channels bioconda
+conda config --add channels conda-forge
+conda config --set channel_priority strict
 ```
 
-In general and especially in the case of performance issues, the use of `mamba` (available in Miniforge by default and installable in the base environment of any conda distribution) is recommended, replacing `conda create` with `mamba create`.
+SPICE and its required Gurobi solver can then be installed together into a new `conda` environment named `spice` with a single command:
+```shell
+conda create -n spice -c conda-forge -c bioconda -c gurobi spice gurobi
+```
 
-After the installation, the environment can be activated and SPICE libraries can be executed from within the environment:
+This requires a `conda` distribution, such as the recommended [Miniforge](https://github.com/conda-forge/miniforge), the compact [Miniconda](https://docs.conda.io/en/latest/miniconda.html), or the complete [Anaconda](https://www.anaconda.com/); `mamba` can be used as a faster drop-in replacement for `conda`. Alternatively, the same environment can be created from the provided [environment.yml](environment.yml) with `conda env create -f environment.yml`.
+
+After installation, the environment is activated with:
 ```shell
 conda activate spice
 ```
+SPICE can then be run through the `spice` command-line interface or imported as a Python library (see the [demo](./spice_demo.ipynb)).
 
-Also, through [Pyomo](https://pyomo.readthedocs.io/en/stable/solving_pyomo_models.html#supported-solvers), SPICE requires the use of [Gurobi](https://www.gurobi.com/) which requires a valid Gurobi license that can be obtained freely for academic research purposes.
+Also, through [Pyomo](https://pyomo.readthedocs.io/en/stable/solving_pyomo_models.html#supported-solvers), SPICE requires the use of [Gurobi](https://www.gurobi.com/) (installed by the command above from the `gurobi` channel), which requires a valid Gurobi license that can be obtained freely for academic research purposes.
 To do this, make sure that the environmental variable `GRB_LICENSE_FILE` points to a valid license file (typically with a `.lic` extension). This can be easily obtained depending on the type of free academic license available:
 
 1. **Individual license**. This license can be obtained [easily](http://www.gurobi.com/academia/academia-center) by any academic user with an institutional email. This license is user and machine-specific, meaning that the user needs to require a different license for every used machine. Assuming the license is stored at `/path/to/gurobi.lic`, set the environment variable `GRB_LICENSE_FILE` to point to it:

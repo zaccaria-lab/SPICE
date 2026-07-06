@@ -1,0 +1,8 @@
+name: spice
+channels:
+  - conda-forge
+  - bioconda
+  - gurobi
+dependencies:
+  - spice
+  - gurobi >=11.0.0

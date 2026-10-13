@@ -25,6 +25,7 @@ import numpy as np
 import pandas as pd
 
 from spice.spice_bootstrap import run_spice_bootstrap
+import spice.io.logo as logo
 
 
 # ---------------------------------------------------------------------------
@@ -372,6 +373,7 @@ def _make_plots(res, output_dir, allele_specific):
 
 def main(args=None):
     print('\n======== SPICE: Subclone Probability Inference of Copy-number Evolution ========\n')
+    sys.stderr.write(logo.render_logo())
 
     config = parse_args(args)
     data_path = config.pop('data')

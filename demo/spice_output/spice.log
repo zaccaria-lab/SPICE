@@ -1,0 +1,30 @@
+SPICE 2026-11-18 15:59:03,823 | STEP | spice_bootstrap.py >>> Processing input data
+SPICE 2026-11-18 15:59:03,829 | WARNING | input.py >>> Ignoring columns of leaves_df that SPICE does not use: ['Pos']
+SPICE 2026-11-18 15:59:04,073 | INFO | input.py >>> Total number of segments before filtering: 374
+SPICE 2026-11-18 15:59:04,090 | INFO | input.py >>> Total number of segments after filtering: 262
+SPICE 2026-11-18 15:59:04,589 | INFO | input.py >>> Processed input CN profiles. 5 leaves with 174 final segments
+SPICE 2026-11-18 15:59:04,592 | INFO | spice_bootstrap.py >>> Input data valid
+SPICE 2026-11-18 15:59:04,593 | STEP | spice_bootstrap.py >>> Bootstrapping topologies
+SPICE 2026-11-18 15:59:56,060 | INFO | spice_bootstrap.py >>> Bootstrapping complete : 4 unique topologies
+SPICE 2026-11-18 15:59:56,061 | STEP | spice_bootstrap.py >>> Running SPICE ILP: total time limit = 18000s
+SPICE 2026-11-18 15:59:56,062 | INFO | spice_bootstrap.py >>> Running SPICE ILP: topology 1 of 4 with 244 solutions : time limit = 11016.0s
+SPICE 2026-11-18 16:00:18,272 | INFO | spice_bootstrap.py >>> SPICE ILP completed to optimality for topology 1 of 4
+SPICE 2026-11-18 16:03:19,941 | INFO | spice_bootstrap.py >>> Enumeration of solutions completed to optimality for topology 1 of 4
+SPICE 2026-11-18 16:03:19,946 | INFO | spice_bootstrap.py >>> Running SPICE ILP: topology 2 of 4 with 5 solutions : time limit = 2430.0s
+SPICE 2026-11-18 16:03:44,106 | INFO | spice_bootstrap.py >>> SPICE ILP completed to optimality for topology 2 of 4
+SPICE 2026-11-18 16:04:09,582 | INFO | spice_bootstrap.py >>> Enumeration of solutions completed to optimality for topology 2 of 4
+SPICE 2026-11-18 16:04:09,584 | INFO | spice_bootstrap.py >>> Running SPICE ILP: topology 3 of 4 with 1 solutions : time limit = 2295.0s
+SPICE 2026-11-18 16:04:25,887 | INFO | spice_bootstrap.py >>> SPICE ILP completed to optimality for topology 3 of 4
+SPICE 2026-11-18 16:04:49,842 | INFO | spice_bootstrap.py >>> Enumeration of solutions completed to optimality for topology 3 of 4
+SPICE 2026-11-18 16:04:49,845 | INFO | spice_bootstrap.py >>> Running SPICE ILP: topology 4 of 4 with 1 solutions : time limit = 2259.0s
+SPICE 2026-11-18 16:05:11,120 | INFO | spice_bootstrap.py >>> SPICE ILP completed to optimality for topology 4 of 4
+SPICE 2026-11-18 16:05:35,286 | INFO | spice_bootstrap.py >>> Enumeration of solutions completed to optimality for topology 4 of 4
+SPICE 2026-11-18 16:05:35,956 | INFO | spice_bootstrap.py >>> SPICE ILP complete: total ILP time = 339.89
+SPICE 2026-11-18 16:05:36,215 | STEP | spice_bootstrap.py >>> Filling CN small segments using the focal evolutionary model
+SPICE 2026-11-18 16:06:38,522 | INFO | spice_bootstrap.py >>> Filling CN small segments complete
+SPICE 2026-11-18 16:06:40,733 | INFO | utils.py >>> No duplicate solutions found
+SPICE 2026-11-18 16:06:56,002 | STEP | spice_bootstrap.py >>> Calculating solution probabilities and ranking multiple solutions
+SPICE 2026-11-18 16:07:22,215 | INFO | spice_bootstrap.py >>> Ranking multiple solutions complete
+SPICE 2026-11-18 16:07:22,396 | INFO | spice_bootstrap.py >>> Total SPICE run time: 498.57s
+SPICE 2026-11-18 16:07:22,618 | INFO | spice_bootstrap.py >>> Peak memory usage: 1718.11 MB
+SPICE 2026-11-18 16:07:22,624 | STEP | spice_bootstrap.py >>> SPICE complete

@@ -5,26 +5,26 @@ from setuptools import setup
 setuptools.setup(
     name='spice',
     # Keep in sync with spice/__init__.py __version__.
-    version='0.1.0',
+    version='1.1.0',
     python_requires='>=3.9',
     packages=[
         'spice',
-        'spice.core',
-        'spice.core.optimal_tree',
-        'spice.core.multi_solutions',
-        'spice.core.bootstrapping',
-        'spice.core.auxillary',
-        'spice.io',
-        'spice.sh',
-        'spice.plotting',
-        'spice.postprocess',
+        'spice.bin',
+        'spice.libs',
+        'spice.libs.ilp',
+        'spice.libs.ilp.optimal',
+        'spice.libs.ilp.multi',
+        'spice.libs.topology',
+        'spice.libs.utils',
+        'spice.libs.preprocess',
+        'spice.libs.postprocess',
+        'spice.libs.plotting',
     ],
     author='Abigail Bunkum and Simone Zaccaria',
     author_email='s.zaccaria@ucl.ac.uk',
     description='Subclone Probability Inference of Copy-number Evolution (SPICE)',
     long_description='https://github.com/zaccaria-lab/SPICE',
     url='https://github.com/zaccaria-lab/SPICE',
-    # Versions follow the tested environment in spice_env.yaml.
     # NOTE: Gurobi is a required solver but is provided via the conda recipe
     # (meta.yaml run requirements), not through pip, so it is intentionally
     # omitted from install_requires here.
@@ -59,5 +59,5 @@ setuptools.setup(
         'copy-number',
         'phylogenetics',
         'tumour evolution'],
-    entry_points={'console_scripts': ['spice=spice.sh.spice:main']}
+    entry_points={'console_scripts': ['spice=spice.bin.spice:main']}
 )
